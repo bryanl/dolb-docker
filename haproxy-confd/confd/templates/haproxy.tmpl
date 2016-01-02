@@ -30,11 +30,12 @@ defaults
     errorfile 503 /etc/haproxy/errors/503.http
     errorfile 504 /etc/haproxy/errors/504.http
 
-frontend http-in
-    bind *:8080
+{{range $service := ls "/services"}}
+frontend {{$service}}-in
+    {{$port := printf "/services/%s/port" $service}} {{if exists $port}}
+    bind *:{{getv $port}}
+    {{end}}
   
-    {{range $service := ls "/services"}}
-    
     {{$key := printf "/services/%s/domain" $service}}  {{if exists $key}}
     acl host_{{$service}} hdr(host) -i {{getv $key}}
     {{end}}
@@ -42,12 +43,10 @@ frontend http-in
     acl host_{{$service}} url_reg -i {{getv $key}}
     {{end}}  
     acl {{$service}}_health path_beg /ping
-    {{end}}
     
-    {{range $service := ls "/services"}}
     use_backend {{$service}} if host_{{$service}}
     use_backend {{$service}} if {{$service}}_health
-    {{end}}
+{{end}}
 
 {{range $service := ls "/services"}}
 backend {{$service}}
